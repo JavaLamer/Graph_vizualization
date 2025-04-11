@@ -22,21 +22,31 @@ def contains_test(text):
     pattern = r'test'
     return bool(re.search(pattern, text))
 
-def clasify(ip):
 
-    lin_set = {ip.strip() for ip in linux_set}
-    win_set = {ip.strip() for ip in windows_set}    
-    it_set = {ip.strip() for ip in iti_set}
-
-    checks = [
-        (is_private(ip), 'LAN'),
-        (lambda ip: ip in lin_set, 'LS'),
-        (lambda ip: ip in win_set, 'WS'),
-        (lambda ip: ip in it_set, 'IT'),    ]
-    for checking, label in checks:
-        if checking(ip):
-            return label
+def create_classify_ip(lin_set, windows_set, it_set):   
+    def clasify(ip):     
+        checks = [
+            (is_private(ip), 'LAN'),
+            (lambda ip: ip in lin_set, 'LS'),
+            (lambda ip: ip in win_set, 'WS'),
+            (lambda ip: ip in it_set, 'IT'),    ]
+        for checking, label in checks:
+            if checking(ip):
+                return label
         return 'WAN'
+    return clasify
+
+def system_clasification():
+    df_linux = pd.read_excel('list_lin.xlsx', header=None, names=['IP'])
+    df_windows = pd.read_excel('list_win.xlsx', header=None, names=['IP'])
+    df_it = pd.read_excel('it.xlsx', header=None, names=['IP'])
+
+    # Создание наборов IP, удаляя лишние пробелы
+    linux_set = {ip.strip() for ip in df_linux['IP']}
+    windows_set = {ip.strip() for ip in df_windows['IP']}
+    it_set = {ip.strip() for ip in df_it['IP']}
+    
+    return linux_set, windows_set, it_set
     
 def is_private(ip):
                 try:
@@ -244,16 +254,9 @@ def convert_network_log_to_excel(input_file, output_file):
 
             df['IP_source'] = df['Server_name'].apply(get_ip)
 
-            df_linux = pd.read_excel('list_lin.xlsx', header=None, names=['IP'])
-            df_windows = pd.read_excel('list_win.xlsx', header=None, names=['IP'])
-            df_it = pd.read_excel('it.xlsx', header=None, names=['IP'])
-
-            linux_set = set(df_linux['IP'].str.strip())
-            windows_set = set(df_windows['IP'].str.strip())
-            iti_set = set(df_it['IP'].str.strip())
-                            
+            lin_set, win_set, it_set = system_clasification()
+            classify = create_classify_ip(linux_set, windows_set, it_set)
              
-            
             df['NT_Group_by_dest'] = '-'
             for row in df.itertuples():
                 ip_list = str(row.IP).split(",")
