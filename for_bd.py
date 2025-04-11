@@ -22,7 +22,22 @@ def contains_test(text):
     pattern = r'test'
     return bool(re.search(pattern, text))
 
+def clasify(ip):
 
+    lin_set = {ip.strip() for ip in linux_set}
+    win_set = {ip.strip() for ip in windows_set}    
+    it_set = {ip.strip() for ip in iti_set}
+
+    checks = [
+        (is_private(ip), 'LAN'),
+        (lambda ip: ip in lin_set, 'LS'),
+        (lambda ip: ip in win_set, 'WS'),
+        (lambda ip: ip in it_set, 'IT'),    ]
+    for checking, label in checks:
+        if checking(ip):
+            return label
+        return 'WAN'
+    
 def is_private(ip):
                 try:
                     ip_obj = ipaddress.ip_address(ip)
@@ -237,9 +252,7 @@ def convert_network_log_to_excel(input_file, output_file):
             windows_set = set(df_windows['IP'].str.strip())
             iti_set = set(df_it['IP'].str.strip())
                             
-            lin_set = {ip.strip() for ip in linux_set}
-            win_set = {ip.strip() for ip in windows_set}    
-            it_set = {ip.strip() for ip in iti_set} 
+             
             
             df['NT_Group_by_dest'] = '-'
             for row in df.itertuples():
@@ -247,16 +260,7 @@ def convert_network_log_to_excel(input_file, output_file):
                 for ip in ip_list:
                     ip = ip.strip()
                     if row.Dest == "Что-то снаружи":
-                        if is_private(ip):
-                                df.at[row.Index, 'Dest'] = 'LAN'
-                        elif ip in lin_set:
-                                df.at[row.Index, 'Dest'] = 'LS'
-                        elif ip in win_set:
-                                df.at[row.Index, 'Dest'] = 'WS'
-                        elif ip in it_set:
-                                df.at[row.Index, 'Dest'] = 'IT'
-                        else:
-                                df.at[row.Index, 'Dest'] = 'WAN'  
+                        df.at[row.Index, 'Dest'] = clasify(ip)  
 
             df['Group_by_serv'] = 'Prod'
             
